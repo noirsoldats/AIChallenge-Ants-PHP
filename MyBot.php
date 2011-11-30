@@ -5,7 +5,7 @@ require_once 'Ants.php';
 class MyBot
 {
     private $directions = array('n','e','s','w');
-	private $type_short = array(0 => "A", -1 => "D", -2 => "L", -3 => "F", -4 => "W", -5 => "U");
+    private $type_short = array(0 => "A", -1 => "D", -2 => "L", -3 => "F", -4 => "W", -5 => "U");
     private $unseen = array();
     private $orders = array();
     private $ants;
@@ -23,29 +23,31 @@ class MyBot
     private $diffusion_map = array();
 
     public function debug($output){
-        file_put_contents($_SERVER['PWD']."/debug.log", $output, LOCK_EX);
+        file_put_contents($_SERVER['PWD']."/debug.log", $output, LOCK_EX|FILE_APPEND);
     }
 
-	public function outputMap($map){
-		$display = "";
-		try{
-			foreach($map as $ri => $row){
-				foreach($row as $ci => $col){
-					$display .= "|".$this->type_short[$this->ants->map[$row][$col]]."".str_pad(round($col['food'], 0), 6, " ", STR_PAD_BOTH)."|";
-				}
-				$display .= "\n";
-			}
-		}catch(Exception $e){
-			file_put_contents($_SERVER['PWD']."/error.log", var_export($e, true), LOCK_EX);
-			throw $e;
-		}
-		file_put_contents($_SERVER['PWD']."/map".$this->ants->turns.".log", $display, LOCK_EX);
-	}
+    public function outputMap($map){
+        $display = "\n".str_pad("", 4, " ", STR_PAD_BOTH);
+        foreach(range(0, $this->ants->cols-1) AS $c1){
+            $display .= "| ".str_pad($c1, 6, " ", STR_PAD_BOTH)."|";
+        }
+        $display .= "\n";
+        foreach($map as $ri => $row){
+            $display .= str_pad($ri, 4, " ", STR_PAD_BOTH);
+            foreach($row as $ci => $col){
+                $display .= "|".$this->type_short[$this->ants->map[$ri][$ci]]."".str_pad(round($col['food'], 0), 6, " ", STR_PAD_BOTH)."|";
+            }
+            $display .= "\n";
+        }
+        file_put_contents($_SERVER['PWD']."/map.log", $display, LOCK_EX|FILE_APPEND);
+    }
 
     public function doSetup($ants){
-		unlink($_SERVER['PWD']."/debug.log");
-        foreach(range(0, $ants->rows) as $row){
-            foreach(range(0, $ants->cols) as $col){
+        unlink($_SERVER['PWD']."/debug.log");
+        unlink($_SERVER['PWD']."/map.log");
+        //$this->debug(var_export($ants, true));
+        foreach(range(0, $ants->rows-1) as $row){
+            foreach(range(0, $ants->cols-1) as $col){
                 $value = ($ants->map[$row][$col] == WATER) ? 9999999 : 0;
                 $this->explorer_map[$row][$col] = $value;
                 $this->diffusion_map[$row][$col] = array('food' => 0, 'hill' => 0);
@@ -57,8 +59,8 @@ class MyBot
         $this->ants = $ants;
         $this->orders = array();
         $this->build_diffusion();
-		$this->outputMap($this->diffusion_map);
-        $this->debug(var_export($this->diffusion_map, true));
+        $this->outputMap($this->diffusion_map);
+        //$this->debug(var_export($this->diffusion_map, true));
         //$this->debug(var_export($ants, true));
         // Prevent Stepping on own hills
         foreach($ants->myHills as $hill){
@@ -79,8 +81,7 @@ class MyBot
                         if($row !=0 && $col != 0)
                             continue;
 
-                        $dest_row = ($row + $aRow) % $ants->rows;
-                        $dest_col = ($col + $aCol) % $ants->cols;
+                        list($dest_row, $dest_col) = $this->map_wrap(($row + $aRow), ($col + $aCol));
 
                         if(($this->diffusion_map[$dest_row][$dest_col]['food'] > $highest) && ($this->move_okay($dest_row, $dest_col))){
                             $highest = $this->diffusion_map[$dest_row][$dest_col]['food'];
@@ -96,8 +97,7 @@ class MyBot
                         if($row !=0 && $col != 0)
                             continue;
 
-                        $dest_row = ($row + $aRow) % $ants->rows;
-                        $dest_col = ($col + $aCol) % $ants->cols;
+                        list($dest_row, $dest_col) = $this->map_wrap(($row + $aRow), ($col + $aCol));
 
                         if(($this->diffusion_map[$dest_row][$dest_col]['food'] >= $highest) && ($this->move_okay($dest_row, $dest_col))){
                             $destinations[] = array($dest_row, $dest_col);
@@ -106,11 +106,18 @@ class MyBot
                 }
 
                 // Choose a random destination from possible destinations
-                $destination_order = array_rand($destinations, count($destinations));
-                foreach($destination_order as $dest_idx){
-                    list($dRow, $dCol) = $destinations[$dest_idx];
+                if(count($destinations) == 1){
+                    list($dRow, $dCol) = $destinations[0];
                     if($this->do_move_location($aRow, $aCol, $dRow, $dCol)){
-                        break;
+                        $this->explorer_map[$dest_row][$dest_col] += 1;
+                    }
+                }elseif(count($destinations) > 1){
+                    $destination_order = array_rand($destinations, count($destinations));
+                    foreach($destination_order as $dest_idx){
+                        list($dRow, $dCol) = $destinations[$dest_idx];
+                        if($this->do_move_location($aRow, $aCol, $dRow, $dCol)){
+                            break;
+                        }
                     }
                 }
             }else{
@@ -123,8 +130,7 @@ class MyBot
                         if($row !=0 && $col != 0)
                             continue;
 
-                        $dest_row = ($row + $aRow) % $ants->rows;
-                        $dest_col = ($col + $aCol) % $ants->cols;
+                        list($dest_row, $dest_col) = $this->map_wrap(($row + $aRow), ($col + $aCol));
 
                         if(($this->explorer_map[$dest_row][$dest_col] < $least) && ($this->move_okay($dest_row, $dest_col))){
                             $least = $this->explorer_map[$dest_row][$dest_col];
@@ -140,8 +146,7 @@ class MyBot
                         if($row !=0 && $col != 0)
                             continue;
 
-                        $dest_row = ($row + $aRow) % $ants->rows;
-                        $dest_col = ($col + $aCol) % $ants->cols;
+                        list($dest_row, $dest_col) = $this->map_wrap(($row + $aRow), ($col + $aCol));
 
                         if(($this->explorer_map[$dest_row][$dest_col] <= ($least+1)) && ($this->move_okay($dest_row, $dest_col))){
                             $destinations[] = array($dest_row, $dest_col);
@@ -150,12 +155,20 @@ class MyBot
                 }
 
                 // Choose a random destination from possible destinations
-                $destination_order = array_rand($destinations, count($destinations));
-                foreach($destination_order as $dest_idx){
-                    list($dRow, $dCol) = $destinations[$dest_idx];
+                if(count($destinations) == 1){
+                    list($dRow, $dCol) = $destinations[0];
                     if($this->do_move_location($aRow, $aCol, $dRow, $dCol)){
                         $this->explorer_map[$dest_row][$dest_col] += 1;
-                        break;
+                    }
+                }elseif(count($destinations) > 1){
+                    $destination_order = array_rand($destinations, count($destinations));
+                    $this->debug($destination_order);
+                    foreach($destination_order as $dest_idx){
+                        list($dRow, $dCol) = $destinations[$dest_idx];
+                        if($this->do_move_location($aRow, $aCol, $dRow, $dCol)){
+                            $this->explorer_map[$dest_row][$dest_col] += 1;
+                            break;
+                        }
                     }
                 }
             }
@@ -167,6 +180,14 @@ class MyBot
                 }
             }*/
         }
+    }
+    
+    private function map_wrap($dest_row, $dest_col){
+        $dest_row = $dest_row % $this->ants->rows;
+        $dest_col = $dest_col % $this->ants->cols;
+        $dest_row = ($dest_row < 0) ? $dest_row + $this->ants->rows : $dest_row;
+        $dest_col = ($dest_col < 0) ? $dest_col + $this->ants->cols : $dest_col;
+        return array($dest_row, $dest_col);
     }
 
     private function do_move_location($cRow, $cCol, $dRow, $dCol){
@@ -193,8 +214,8 @@ class MyBot
         $this->enemy_hills = $this->ants->enemyHills;
         
         // Reset Diffusion Map Food and deprioritize Hills
-        foreach(range(0, $this->ants->rows) as $row){
-            foreach(range(0, $this->ants->cols) as $col){
+        foreach(range(0, $this->ants->rows-1) as $row){
+            foreach(range(0, $this->ants->cols-1) as $col){
                 $this->diffusion_map[$row][$col]['food'] = 0;
                 $this->diffusion_map[$row][$col]['hill'] = $this->diffusion_map[$row][$col]['hill']/4;
             }
@@ -217,8 +238,7 @@ class MyBot
 
                     foreach(range(0, ($col_mod+$col_step), $col_step) as $check_c){
                         foreach(range(0, ($row_mod+$row_step), $row_step) as $check_r){
-                            $check_row = ($check_r + $food[0]) % $this->ants->rows;
-                            $check_col = ($check_c + $food[1]) % $this->ants->cols;
+                            list($check_row, $check_col) = $this->map_wrap(($check_r + $food[0]), ($check_c + $food[1]));
                             if($this->ants->map[$check_row][$check_col] == WATER){
                                 $water_found = true;
                                 break 2;
@@ -230,8 +250,7 @@ class MyBot
                         continue;
                     }
 
-                    $dest_row = ($row_mod + $food[0]) % $this->ants->rows;
-                    $dest_col = ($col_mod + $food[1]) % $this->ants->cols;
+                    list($dest_row, $dest_col) = $this->map_wrap(($row_mod + $food[0]), ($col_mod + $food[1]));
 
                     if($this->ants->map[$dest_row][$dest_col] == WATER){
                         continue;
