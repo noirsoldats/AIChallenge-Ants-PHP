@@ -5,6 +5,7 @@ require_once 'Ants.php';
 class MyBot
 {
     private $directions = array('n','e','s','w');
+	private $type_short = array(0 => "A", -1 => "D", -2 => "L", -3 => "F", -4 => "W", -5 => "U");
     private $unseen = array();
     private $orders = array();
     private $ants;
@@ -17,15 +18,32 @@ class MyBot
     private $hunters = array();
     private $guards = array();
     private $path_cache = array();
-    
+
     private $explorer_map = array();
     private $diffusion_map = array();
-    
+
     public function debug($output){
-        file_put_contents("/home/dustin/Projects/git/php_starter_package/debug.log", $output, LOCK_EX);
+        file_put_contents($_SERVER['PWD']."/debug.log", $output, LOCK_EX);
     }
-    
+
+	public function outputMap($map){
+		$display = "";
+		try{
+			foreach($map as $ri => $row){
+				foreach($row as $ci => $col){
+					$display .= "|".$this->type_short[$this->ants->map[$row][$col]]."".str_pad(round($col['food'], 0), 6, " ", STR_PAD_BOTH)."|";
+				}
+				$display .= "\n";
+			}
+		}catch(Exception $e){
+			file_put_contents($_SERVER['PWD']."/error.log", var_export($e, true), LOCK_EX);
+			throw $e;
+		}
+		file_put_contents($_SERVER['PWD']."/map".$this->ants->turns.".log", $display, LOCK_EX);
+	}
+
     public function doSetup($ants){
+		unlink($_SERVER['PWD']."/debug.log");
         foreach(range(0, $ants->rows) as $row){
             foreach(range(0, $ants->cols) as $col){
                 $value = ($ants->map[$row][$col] == WATER) ? 9999999 : 0;
@@ -35,11 +53,11 @@ class MyBot
         }
     }
 
-    public function doTurn( $ants )
-    {
+    public function doTurn( $ants ){
         $this->ants = $ants;
         $this->orders = array();
         $this->build_diffusion();
+		$this->outputMap($this->diffusion_map);
         $this->debug(var_export($this->diffusion_map, true));
         //$this->debug(var_export($ants, true));
         // Prevent Stepping on own hills
@@ -51,7 +69,7 @@ class MyBot
             list ($aRow, $aCol) = $ant;
             $destinations = array();
             $highest = 0;
-            
+
             if($this->diffusion_map[$aRow][$aCol]['food'] > 0.01){
                 // Determine Highest Scent
                 foreach(range(-1, 1) as $row){
@@ -60,10 +78,10 @@ class MyBot
                             continue;
                         if($row !=0 && $col != 0)
                             continue;
-    
+
                         $dest_row = ($row + $aRow) % $ants->rows;
                         $dest_col = ($col + $aCol) % $ants->cols;
-                        
+
                         if(($this->diffusion_map[$dest_row][$dest_col]['food'] > $highest) && ($this->move_okay($dest_row, $dest_col))){
                             $highest = $this->diffusion_map[$dest_row][$dest_col]['food'];
                         }
@@ -77,16 +95,16 @@ class MyBot
                             continue;
                         if($row !=0 && $col != 0)
                             continue;
-    
+
                         $dest_row = ($row + $aRow) % $ants->rows;
                         $dest_col = ($col + $aCol) % $ants->cols;
-                        
+
                         if(($this->diffusion_map[$dest_row][$dest_col]['food'] >= $highest) && ($this->move_okay($dest_row, $dest_col))){
                             $destinations[] = array($dest_row, $dest_col);
                         }
                     }
                 }
-                
+
                 // Choose a random destination from possible destinations
                 $destination_order = array_rand($destinations, count($destinations));
                 foreach($destination_order as $dest_idx){
@@ -104,10 +122,10 @@ class MyBot
                             continue;
                         if($row !=0 && $col != 0)
                             continue;
-    
+
                         $dest_row = ($row + $aRow) % $ants->rows;
                         $dest_col = ($col + $aCol) % $ants->cols;
-                        
+
                         if(($this->explorer_map[$dest_row][$dest_col] < $least) && ($this->move_okay($dest_row, $dest_col))){
                             $least = $this->explorer_map[$dest_row][$dest_col];
                         }
@@ -121,16 +139,16 @@ class MyBot
                             continue;
                         if($row !=0 && $col != 0)
                             continue;
-    
+
                         $dest_row = ($row + $aRow) % $ants->rows;
                         $dest_col = ($col + $aCol) % $ants->cols;
-                        
+
                         if(($this->explorer_map[$dest_row][$dest_col] <= ($least+1)) && ($this->move_okay($dest_row, $dest_col))){
                             $destinations[] = array($dest_row, $dest_col);
                         }
                     }
                 }
-                
+
                 // Choose a random destination from possible destinations
                 $destination_order = array_rand($destinations, count($destinations));
                 foreach($destination_order as $dest_idx){
@@ -150,7 +168,7 @@ class MyBot
             }*/
         }
     }
-    
+
     private function do_move_location($cRow, $cCol, $dRow, $dCol){
         $directions = $this->ants->direction($cRow, $cCol, $dRow, $dCol);
         foreach($directions as $direction){
@@ -162,14 +180,14 @@ class MyBot
         }
         return false;
     }
-    
+
     private function move_okay($dest_row, $dest_col){
         if($this->ants->unoccupied($dest_row, $dest_col) && $this->ants->passable($dest_row, $dest_col) &&  !isset($this->orders[$dest_row][$dest_col])){
             return true;
         }
         return false;
     }
-    
+
     private function build_diffusion(){
         $this->foods = $this->ants->food;
         $this->enemy_hills = $this->ants->enemyHills;
@@ -181,7 +199,7 @@ class MyBot
                 $this->diffusion_map[$row][$col]['hill'] = $this->diffusion_map[$row][$col]['hill']/4;
             }
         }
-        
+
         foreach($this->foods as $food){
             $food_boost = 1000 + rand(0, 250);
             
@@ -196,7 +214,7 @@ class MyBot
                     $water_found = false;
                     $col_step = $col_mod < 0 ? -1 : 1;
                     $row_step = $row_mod < 0 ? -1 : 1;
-                    
+
                     foreach(range(0, ($col_mod+$col_step), $col_step) as $check_c){
                         foreach(range(0, ($row_mod+$row_step), $row_step) as $check_r){
                             $check_row = ($check_r + $food[0]) % $this->ants->rows;
@@ -207,30 +225,29 @@ class MyBot
                             }
                         }
                     }
-                    
+
                     if($water_found){
                         continue;
                     }
-                    
+
                     $dest_row = ($row_mod + $food[0]) % $this->ants->rows;
                     $dest_col = ($col_mod + $food[1]) % $this->ants->cols;
-                    
+
                     if($this->ants->map[$dest_row][$dest_col] == WATER){
                         continue;
                     }
-                    
+
                     $boost = $food_boost / (abs($row_mod) + abs($col_mod) + 1);
-                    
+
                     if($this->diffusion_map[$dest_row][$dest_col]['food'] > $boost){
                         continue;
                     }
-                    
+
                     $this->diffusion_map[$dest_row][$dest_col]['food'] = $boost;
                 }
             }
         }
     }
-    
 }
 
 /**
