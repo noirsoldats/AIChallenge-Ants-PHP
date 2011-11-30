@@ -148,7 +148,7 @@ class MyBot
 
                         list($dest_row, $dest_col) = $this->map_wrap(($row + $aRow), ($col + $aCol));
 
-                        if(($this->explorer_map[$dest_row][$dest_col] <= ($least+1)) && ($this->move_okay($dest_row, $dest_col))){
+                        if(($this->explorer_map[$dest_row][$dest_col] <= ($least)) && ($this->move_okay($dest_row, $dest_col))){
                             $destinations[] = array($dest_row, $dest_col);
                         }
                     }
