@@ -232,6 +232,7 @@ class Ants
             $current_line = trim($current_line);
             if ($current_line === 'ready') {
                 $ants->setup($map_data);
+                $bot->doSetup($ants);
                 $ants->finishTurn();
                 $map_data = array();
             } elseif ($current_line === 'go') {
@@ -245,4 +246,4 @@ class Ants
         }
 
     }
-    }
+}
