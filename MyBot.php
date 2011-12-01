@@ -35,7 +35,7 @@ class MyBot
         foreach($map as $ri => $row){
             $display .= str_pad($ri, 4, " ", STR_PAD_BOTH);
             foreach($row as $ci => $col){
-                $display .= "|".$this->type_short[$this->ants->map[$ri][$ci]]."".str_pad(round($col['food'], 0), 6, " ", STR_PAD_BOTH)."|";
+                $display .= "|".$this->type_short[$this->ants->map[$ri][$ci]]."".str_pad(round($col['food'], 1), 6, " ", STR_PAD_BOTH)."|";
             }
             $display .= "\n";
         }
@@ -45,7 +45,8 @@ class MyBot
     public function doSetup($ants){
         unlink($_SERVER['PWD']."/debug.log");
         unlink($_SERVER['PWD']."/map.log");
-        //$this->debug(var_export($ants, true));
+//        $this->debug("Ant Map:\n");
+//        $this->debug(var_export($ants->map, true));
         foreach(range(0, $ants->rows-1) as $row){
             foreach(range(0, $ants->cols-1) as $col){
                 $value = ($ants->map[$row][$col] == WATER) ? 9999999 : 0;
@@ -53,6 +54,10 @@ class MyBot
                 $this->diffusion_map[$row][$col] = array('food' => 0, 'hill' => 0);
             }
         }
+//        $this->debug("Explorer Map:\n");
+//        $this->debug(var_export($this->explorer_map, true));
+//        $this->debug("Diffusion Map:\n");
+//        $this->debug(var_export($this->diffusion_map, true));
     }
 
     public function doTurn( $ants ){
@@ -180,6 +185,7 @@ class MyBot
                 }
             }*/
         }
+        $this->debug(var_export($this->orders, true));
     }
     
     private function map_wrap($dest_row, $dest_col){
@@ -195,6 +201,7 @@ class MyBot
         foreach($directions as $direction){
             if($this->move_okay($dRow, $dCol)){
                 $this->ants->issueOrder($cRow, $cCol, $direction);
+                $this->debug("Move Issued: $cRow,$cCol - $direction\n");
                 $this->orders[$dRow][$dCol] = array($cRow, $cCol);
                 return true;
             }
