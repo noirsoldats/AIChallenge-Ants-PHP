@@ -11,6 +11,7 @@ define('UNSEEN', -5);
 class Ants
 {
     public $turns = 0;
+	public $currentTurn = 0;
     public $rows = 0;
     public $cols = 0;
     public $loadtime = 0;
@@ -52,12 +53,14 @@ class Ants
     public function issueOrder($aRow, $aCol, $direction)
     {
         printf("o %s %s %s\n", $aRow, $aCol, $direction);
+		$this->debug("Order: $aRow, $aCol, $direction\n");
         flush();
     }
 
     public function finishTurn()
     {
         echo("go\n");
+		$this->debug("-------TURN-------\n");
         flush();
     }
     
@@ -182,60 +185,48 @@ class Ants
     }
 
     public function direction($row1, $col1, $row2, $col2) {
-        $d = array();
-        $row1 = $row1 % $this->rows;
-        $row2 = $row2 % $this->rows;
-        $col1 = $col1 % $this->cols;
-        $col2 = $col2 % $this->cols;
-
+        $d = null;
+//        $row1 = $row1 % $this->rows;
+//        $row2 = $row2 % $this->rows;
+//        $col1 = $col1 % $this->cols;
+//        $col2 = $col2 % $this->cols;
         if ($row1 < $row2) {
-            if ($row2 - $row1 >= $this->rows/2) {
-                $d []= 'n';
-            }
-            if ($row2 - $row1 <= $this->rows/2) {
-                $d []= 's';
-            }
-        } elseif ($row2 < $row1) {
-            if ($row1 - $row2 >= $this->rows/2) {
-                $d []= 's';
-            }
-            if ($row1 - $row2 <= $this->rows/2) {
-                $d []= 'n';
-            }
+			$d = 's';
+        }elseif ($row1 > $row2) {
+			$d = 'n';
+        }elseif ($col1 < $col2) {
+			$d = 'e';
+        }elseif ($col1 > $col2) {
+			$d = 'w';
         }
-        if ($col1 < $col2) {
-            if ($col2 - $col1 >= $this->cols/2) {
-                $d []= 'w';
-            }
-            if ($col2 - $col1 <= $this->cols/2) {
-                $d []= 'e';
-            }
-        } elseif ($col2 < $col1) {
-            if ($col1 - $col2 >= $this->cols/2) {
-                $d []= 'e';
-            }
-            if ($col1 - $col2 <= $this->cols/2) {
-                $d []= 'w';
-            }
-        }
+		$this->debug("Direction($d): $row1, $col1 | $row2, $col2\n");
         return $d;
 
     }
 
+    public function debug($output){
+        file_put_contents($_SERVER['PWD']."/debug_ants.log", $output, LOCK_EX|FILE_APPEND);
+    }
 
     public static function run($bot)
     {
+		unlink($_SERVER['PWD']."/debug_ants.log");
         $ants = new Ants();
         $map_data = array();
+		$round = 0;
         while(true) {
             $current_line = fgets(STDIN,1024);
             $current_line = trim($current_line);
             if ($current_line === 'ready') {
                 $ants->setup($map_data);
-                $bot->doSetup($ants);
                 $ants->finishTurn();
                 $map_data = array();
             } elseif ($current_line === 'go') {
+				$round++;
+				$ants->currentTurn = $round;
+				if($round == 1){
+					$bot->doSetup($ants);
+				}
                 $ants->update($map_data);
                 $bot->doTurn($ants);
                 $ants->finishTurn();
