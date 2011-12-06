@@ -53,6 +53,7 @@ class MyBot
 
     public function doSetup($ants){
 	$start = microtime(true);
+        $this->ants = $ants;
         if($ants->debugFlag){
             unlink($_SERVER['PWD']."/debug.log");
             unlink($_SERVER['PWD']."/map.log");
@@ -412,11 +413,11 @@ class MyBot
                     $boost = $food_boost / $distance;
                 }
 
-                if($this->diffusion_map[$scent[0]][$scent[1]]['food'] > $boost){
-                        continue;
-                }
+//                if($this->diffusion_map[$scent[0]][$scent[1]]['food'] > $boost){
+//                        continue;
+//                }
 
-                $this->diffusion_map[$scent[0]][$scent[1]]['food'] = $boost;
+                $this->diffusion_map[$scent[0]][$scent[1]]['food'] += $boost;
             }
         }
         
