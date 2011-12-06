@@ -23,30 +23,36 @@ class MyBot
     private $diffusion_map = array();
 
     public function debug($output){
-//        file_put_contents($_SERVER['PWD']."/debug.log", $output, LOCK_EX|FILE_APPEND);
+        if($this->ants->debugFlag){
+            file_put_contents($_SERVER['PWD']."/debug.log", $output, LOCK_EX|FILE_APPEND);
+        }
     }
 
     public function outputMap($map){
-/*        $display = "\n".str_pad("", 4, " ", STR_PAD_BOTH);
-        foreach(range(0, $this->ants->cols-1) AS $c1){
-            $display .= "| ".str_pad($c1, 6, " ", STR_PAD_BOTH)."|";
-        }
-        $display .= "\n";
-        foreach($map as $ri => $row){
-            $display .= str_pad($ri, 4, " ", STR_PAD_BOTH);
-            foreach($row as $ci => $col){
-                $display .= "|".$this->type_short[$this->ants->map[$ri][$ci]]."".str_pad(round($col['food'], 0), 6, " ", STR_PAD_BOTH)."|";
-//				$display .= "|".$this->type_short[$this->ants->map[$ri][$ci]]."".str_pad($this->explorer_map[$ri][$ci], 6, " ", STR_PAD_BOTH)."|";
+        if($this->ants->debugFlag){
+            $display = "\n".str_pad("", 4, " ", STR_PAD_BOTH);
+            foreach(range(0, $this->ants->cols-1) AS $c1){
+                $display .= "| ".str_pad($c1, 6, " ", STR_PAD_BOTH)."|";
             }
             $display .= "\n";
+            foreach($map as $ri => $row){
+                $display .= str_pad($ri, 4, " ", STR_PAD_BOTH);
+                foreach($row as $ci => $col){
+                    $display .= "|".$this->type_short[$this->ants->map[$ri][$ci]]."".str_pad(round($col['food'], 0), 6, " ", STR_PAD_BOTH)."|";
+    //                $display .= "|".$this->type_short[$this->ants->map[$ri][$ci]]."".str_pad($this->explorer_map[$ri][$ci], 6, " ", STR_PAD_BOTH)."|";
+                }
+                $display .= "\n";
+            }
+            file_put_contents($_SERVER['PWD']."/map.log", $display, LOCK_EX|FILE_APPEND);
         }
-        file_put_contents($_SERVER['PWD']."/map.log", $display, LOCK_EX|FILE_APPEND);*/
     }
 
     public function doSetup($ants){
-		$start = microtime(true);
-//        unlink($_SERVER['PWD']."/debug.log");
-//        unlink($_SERVER['PWD']."/map.log");
+	$start = microtime(true);
+        if($ants->debugFlag){
+            unlink($_SERVER['PWD']."/debug.log");
+            unlink($_SERVER['PWD']."/map.log");
+        }
 //        $this->debug("Ant Map:\n");
 //        $this->debug(var_export($ants->map, true));
         foreach(range(0, $ants->rows-1) as $row){
@@ -66,8 +72,8 @@ class MyBot
     }
 
     public function doTurn( $ants ){
-		$this->debug("-------TURN {$ants->currentTurn}-------\n");
-		$this->debug("Num Ants: ".count($ants->myAnts)."\n");
+        $this->debug("-------TURN {$ants->currentTurn}-------\n");
+        $this->debug("Num Ants: ".count($ants->myAnts)."\n");
         $this->ants = $ants;
         $this->orders = array();
         $this->build_diffusion();

@@ -10,8 +10,10 @@ define('UNSEEN', -5);
 
 class Ants
 {
+    public $debugFlag = false;
+    public $visTool = false;
     public $turns = 0;
-	public $currentTurn = 0;
+    public $currentTurn = 0;
     public $rows = 0;
     public $cols = 0;
     public $loadtime = 0;
@@ -60,7 +62,7 @@ class Ants
     public function finishTurn()
     {
         echo("go\n");
-		$this->debug("-------TURN-------\n");
+        $this->debug("-------TURN-------\n");
         flush();
     }
     
@@ -216,15 +218,26 @@ class Ants
     }
 
     public function debug($output){
-//        file_put_contents($_SERVER['PWD']."/debug_ants.log", $output, LOCK_EX|FILE_APPEND);
+        if($this->debugFlag){
+            file_put_contents($_SERVER['PWD']."/debug_ants.log", $output, LOCK_EX|FILE_APPEND);
+        }
     }
 
     public static function run($bot)
     {
-//        unlink($_SERVER['PWD']."/debug_ants.log");
+        global $argv,$argc;
+        if(in_array("--debug", $argv)){
+            $this->debugFlag = true;
+        }
+        if(in_array("--visTool", $argv)){
+            $this->visTool = true;
+        }
+        if($this->debugFlag){
+            unlink($_SERVER['PWD']."/debug_ants.log");
+        }
         $ants = new Ants();
         $map_data = array();
-		$round = 0;
+	$round = 0;
         while(true) {
             $current_line = fgets(STDIN,1024);
             $current_line = trim($current_line);
@@ -233,11 +246,11 @@ class Ants
                 $ants->finishTurn();
                 $map_data = array();
             } elseif ($current_line === 'go') {
-				$round++;
-				$ants->currentTurn = $round;
-				if($round == 1){
-					$bot->doSetup($ants);
-				}
+                $round++;
+                $ants->currentTurn = $round;
+                if($round == 1){
+                        $bot->doSetup($ants);
+                }
                 $ants->update($map_data);
                 $bot->doTurn($ants);
                 $ants->finishTurn();
