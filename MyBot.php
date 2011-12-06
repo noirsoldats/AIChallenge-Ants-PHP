@@ -23,11 +23,11 @@ class MyBot
     private $diffusion_map = array();
 
     public function debug($output){
-        file_put_contents($_SERVER['PWD']."/debug.log", $output, LOCK_EX|FILE_APPEND);
+//        file_put_contents($_SERVER['PWD']."/debug.log", $output, LOCK_EX|FILE_APPEND);
     }
 
     public function outputMap($map){
-        $display = "\n".str_pad("", 4, " ", STR_PAD_BOTH);
+/*        $display = "\n".str_pad("", 4, " ", STR_PAD_BOTH);
         foreach(range(0, $this->ants->cols-1) AS $c1){
             $display .= "| ".str_pad($c1, 6, " ", STR_PAD_BOTH)."|";
         }
@@ -40,13 +40,13 @@ class MyBot
             }
             $display .= "\n";
         }
-        file_put_contents($_SERVER['PWD']."/map.log", $display, LOCK_EX|FILE_APPEND);
+        file_put_contents($_SERVER['PWD']."/map.log", $display, LOCK_EX|FILE_APPEND);*/
     }
 
     public function doSetup($ants){
 		$start = microtime(true);
-        unlink($_SERVER['PWD']."/debug.log");
-        unlink($_SERVER['PWD']."/map.log");
+//        unlink($_SERVER['PWD']."/debug.log");
+//        unlink($_SERVER['PWD']."/map.log");
 //        $this->debug("Ant Map:\n");
 //        $this->debug(var_export($ants->map, true));
         foreach(range(0, $ants->rows-1) as $row){
@@ -79,14 +79,46 @@ class MyBot
             $this->orders[$hill[0]][$hill[1]] = "None";
         }
         // Determine Movements
-		$start = microtime(true);
+        $start = microtime(true);
         foreach ( $ants->myAnts as $ant ) {
             list ($aRow, $aCol) = $ant;
-			$this->explorer_map[$aRow][$aCol] += 1;
+//            $this->explorer_map[$aRow][$aCol] += 1;
             $destinations = array();
             $highest = 0;
 
-            if($this->diffusion_map[$aRow][$aCol]['food'] > 0.01){
+            if($this->diffusion_map[$aRow][$aCol]['hill'] > 0.01){
+                // Determine Highest Scent
+                foreach(range(-1, 1) as $row){
+                    foreach(range(-1, 1) as $col){
+                        if($row == 0 && $col == 0)
+                            continue;
+                        if($row !=0 && $col != 0)
+                            continue;
+
+                        list($dest_row, $dest_col) = $this->map_wrap(($row + $aRow), ($col + $aCol));
+
+                        if(($this->diffusion_map[$dest_row][$dest_col]['hill'] > $highest) && ($this->move_okay($dest_row, $dest_col))){
+                            $highest = $this->diffusion_map[$dest_row][$dest_col]['hill'];
+                        }
+                    }
+                }
+
+                // Build list of possible destinations
+                foreach(range(-1, 1) as $row){
+                    foreach(range(-1, 1) as $col){
+                        if($row == 0 && $col == 0)
+                            continue;
+                        if($row !=0 && $col != 0)
+                            continue;
+
+                        list($dest_row, $dest_col) = $this->map_wrap(($row + $aRow), ($col + $aCol));
+
+                        if(($this->diffusion_map[$dest_row][$dest_col]['hill'] >= $highest) && ($this->move_okay($dest_row, $dest_col))){
+                            $destinations[] = array($dest_row, $dest_col);
+                        }
+                    }
+                }
+            }elseif($this->diffusion_map[$aRow][$aCol]['food'] > 0.01){
                 // Determine Highest Scent
                 foreach(range(-1, 1) as $row){
                     foreach(range(-1, 1) as $col){
@@ -118,26 +150,10 @@ class MyBot
                         }
                     }
                 }
-
-                // Choose a random destination from possible destinations
-                if(count($destinations) == 1){
-                    list($dRow, $dCol) = $destinations[0];
-                    if($this->do_move_location($aRow, $aCol, $dRow, $dCol)){
-//                        $this->explorer_map[$dest_row][$dest_col] += 1;
-                    }
-                }elseif(count($destinations) > 1){
-                    $destination_order = array_rand($destinations, count($destinations));
-                    foreach($destination_order as $dest_idx){
-                        list($dRow, $dCol) = $destinations[$dest_idx];
-                        if($this->do_move_location($aRow, $aCol, $dRow, $dCol)){
-                            break;
-                        }
-                    }
-                }
             }else{
                 $least = 9999999;
                 // Determine Exploration
-				$this->debug("Exploration Chosen!\n");
+                $this->debug("Exploration Chosen!\n");
                 foreach(range(-1, 1) as $row){
                     foreach(range(-1, 1) as $col){
                         if($row == 0 && $col == 0)
@@ -146,14 +162,14 @@ class MyBot
                             continue;
 
                         list($dest_row, $dest_col) = $this->map_wrap(($row + $aRow), ($col + $aCol));
-						$this->debug("Checking1: $dest_row, $dest_col\n");
+                        $this->debug("Checking1: $dest_row, $dest_col\n");
 
                         if(($this->explorer_map[$dest_row][$dest_col] < $least) && ($this->move_okay($dest_row, $dest_col))){
                             $least = $this->explorer_map[$dest_row][$dest_col];
                         }
                     }
                 }
-				$this->debug("Lowest: $least\n");
+                $this->debug("Lowest: $least\n");
 
                 // Build list of possible destinations
                 foreach(range(-1, 1) as $row){
@@ -164,38 +180,26 @@ class MyBot
                             continue;
 
                         list($dest_row, $dest_col) = $this->map_wrap(($row + $aRow), ($col + $aCol));
-						$this->debug("Checking2: $dest_row, $dest_col\n");
+    			$this->debug("Checking2: $dest_row, $dest_col\n");
 
                         if(($this->explorer_map[$dest_row][$dest_col] <= ($least)) && ($this->move_okay($dest_row, $dest_col))){
                             $destinations[] = array($dest_row, $dest_col);
                         }
                     }
                 }
-				$this->debug("Destinations: \n".var_export($destinations, true)."\n");
+            }
 
-                // Choose a random destination from possible destinations
-                if(count($destinations) == 1){
-                    list($dRow, $dCol) = $destinations[0];
-					$this->debug("Doing Solo Move\n");
-					$this->debug("Dest: $dRow, $dCol\n");
-                    if($this->do_move_location($aRow, $aCol, $dRow, $dCol)){
-						$this->debug("DestI: $dRow, $dCol\n");
-//                        $this->explorer_map[$dRow][$dCol] += 1;
-                    }
-                }elseif(count($destinations) > 1){
-                    $destination_order = array_rand($destinations, count($destinations));
-					$this->debug("Doing Multi Move\n");
-                    $this->debug(var_export($destination_order, true)."\n");
-                    foreach($destination_order as $dest_idx){
-                        list($dRow, $dCol) = $destinations[$dest_idx];
-						$this->debug("Dest: $dRow, $dCol\n");
-                        if($this->do_move_location($aRow, $aCol, $dRow, $dCol)){
-							$this->debug("DestI: $dRow, $dCol\n");
-//                            $this->explorer_map[$dRow][$dCol] += 1;
-                            break;
-                        }
-                    }
-                }
+            // Choose a random destination from possible destinations
+            $this->debug("DestinationsB: \n".var_export($destinations, true)."\n");
+            $start_shuffle = microtime(true);
+            shuffle($destinations);
+            $end_shuffle = microtime(true);
+            $this->debug("Shuffle Weight: ".($end_shuffle-$start_shuffle)."\n");
+            $this->debug("DestinationsA: \n".var_export($destinations, true)."\n");
+            list($dRow, $dCol) = $destinations[0];
+            if($this->do_move_location($aRow, $aCol, $dRow, $dCol)){
+                $this->debug("Dest: $dRow, $dCol\n");
+                $this->explorer_map[$dRow][$dCol] += 1;
             }
             /*foreach ($this->directions as $direction) {
                 list($dRow, $dCol) = $ants->destination($aRow, $aCol, $direction);
@@ -211,10 +215,14 @@ class MyBot
     }
     
     private function map_wrap($dest_row, $dest_col){
+//        $this->debug("Map_Wrap Args: $dest_row, $dest_col\n");
+//        $this->debug("Map_Wrap Ants: {$this->ants->rows}, {$this->ants->cols}\n");
         $dest_row = $dest_row % $this->ants->rows;
         $dest_col = $dest_col % $this->ants->cols;
+//        $this->debug("Map_Wrap Stp1: $dest_row, $dest_col\n");
         $dest_row = ($dest_row < 0) ? $dest_row + $this->ants->rows : $dest_row;
         $dest_col = ($dest_col < 0) ? $dest_col + $this->ants->cols : $dest_col;
+//        $this->debug("Map_Wrap Retr: $dest_row, $dest_col\n");
         return array($dest_row, $dest_col);
     }
 
@@ -238,12 +246,12 @@ class MyBot
         return false;
     }
 	
-	private function getScentableTiles($food_row, $food_col){
-		$scentable = array();
-		$min_row_div = -10;
-		$max_row_div = 10;
-		$min_col_div = -10;
-		$max_col_div = 10;
+	private function getScentableTiles($food_row, $food_col, $radius){
+		$scentable = array(array($food_row, $food_col));
+		$min_row_div = -$radius;
+		$max_row_div = $radius;
+		$min_col_div = -$radius;
+		$max_col_div = $radius;
 		// Let's Try North
 		foreach(range($food_row, ($food_row+$min_row_div)) as $check_row){
 			list($check_row, $a) = $this->map_wrap($check_row, $food_col);
@@ -356,8 +364,11 @@ class MyBot
 				}
 			}
 		}
+//            $this->debug("Scentable Cnt: ".count($scentable)."\n");
 		$scentable = array_unique($scentable, SORT_REGULAR);
-		$this->debug("Scentable: \n".var_export($scentable, true)."\n");
+//		$this->debug("Scentable: \n".var_export($scentable, true)."\n");
+//            $this->debug("Scentable UCnt: ".count($scentable)."\n");
+            return $scentable;
 	}
 
     private function build_diffusion(){
@@ -377,117 +388,44 @@ class MyBot
         }
 		$end_reset = microtime(true);
 		$this->debug("Reset Time: ".($end_reset-$start_reset)."\n");
-//$ittrs = 0;
+
         foreach($this->foods as $food){
             $food_boost = 1000 + rand(0, 250);
             list($food_row, $food_col) = $food;
-			$scentable = $this->getScentableTiles($food_row, $food_col);
-			foreach($scentable as $scent){
-				$row_mod = $scent[0] - $food_row;
-				$col_mod = $scent[1] - $food_col;
-				$boost = $food_boost / (abs($row_mod) + abs($col_mod) + 1);
-
-				if($this->diffusion_map[$dest_row][$dest_col]['food'] > $boost){
-					continue;
-				}
-
-				$this->diffusion_map[$dest_row][$dest_col]['food'] = $boost;
-			}
             // Diffuse Food Scent in a radius of 10 units
-//            foreach(range(-10, 10) as $row_mod){
-//                foreach(range(-10, 10) as $col_mod){
-//                    if((abs($row_mod) + abs($col_mod)) > 10){
-//                        // Shape Scents in to a DIAMOND!
-//                        continue;
-//                    }
-//
-//                    $water_found_a = false;
-//					$water_found_b = false;
-//                    $col_step = $col_mod < 0 ? -1 : 1;
-//                    $row_step = $row_mod < 0 ? -1 : 1;
-//
-//					// Check for and stop scenting at water.
-//                    foreach(range(0, ($col_mod+$col_step), $col_step) as $check_c){
-//                        foreach(range(0, ($row_mod+$row_step), $row_step) as $check_r){
-//                            list($check_row, $check_col) = $this->map_wrap(($check_r + $food[0]), ($check_c + $food[1]));
-//                            if($this->ants->map[$check_row][$check_col] == WATER){
-//                                $water_found = true;
-//                                break 2;
-//                            }
-//                        }
-//                    }
-//					$start_pather = microtime(true);
-//					do{
-//						$check_col = ($food_col + $col_mod);
-//						$check_row = ($food_row + $row_mod);
-//						// Check Across
-//						foreach(range(($food_col + $col_mod), $food_col) as $check_col){
-//$ittrs++;
-//							list($check_row, $check_col) = $this->map_wrap($check_row, $check_col);
-//							if($this->ants->map[$check_row][$check_col] == WATER){
-//								$water_found_a = true;
-//								break 2;
-//							}
-//						}
-//						// Check Up
-//						foreach(range(($food_row + $row_mod), $food_row) as $check_row){
-//$ittrs++;
-//							list($check_row, $check_col) = $this->map_wrap($check_row, $check_col);
-//							if($this->ants->map[$check_row][$check_col] == WATER){
-//								$water_found_a = true;
-//								break 2;
-//							}
-//						}
-//					}while(false);
-//					do{
-//						// Reset
-//						$check_col = ($food_col + $col_mod);
-//						$check_row = ($food_row + $row_mod);
-//						// Check Up
-//						foreach(range(($food_row + $row_mod), $food_row) as $check_row){
-//$ittrs++;
-//							list($check_row, $check_col) = $this->map_wrap($check_row, $check_col);
-//							if($this->ants->map[$check_row][$check_col] == WATER){
-//								$water_found_b = true;
-//								break 2;
-//							}
-//						}
-//						// Check Across
-//						foreach(range(($food_col + $col_mod), $food_col) as $check_col){
-//$ittrs++;
-//							list($check_row, $check_col) = $this->map_wrap($check_row, $check_col);
-//							if($this->ants->map[$check_row][$check_col] == WATER){
-//								$water_found_b = true;
-//								break 2;
-//							}
-//						}
-//
-//					}while(false);
-//					$end_pather = microtime(true);
-//					$this->debug("Pather Time: ".($end_pather-$start_pather)."\n");
-//
-//                    if($water_found_a && $water_found_b){
-//                        continue;
-//                    }
-//
-//                    list($dest_row, $dest_col) = $this->map_wrap(($row_mod + $food[0]), ($col_mod + $food[1]));
-//
-//                    if($this->ants->map[$dest_row][$dest_col] == WATER){
-//                        continue;
-//                    }
-//
-//                    $boost = $food_boost / (abs($row_mod) + abs($col_mod) + 1);
-//
-//                    if($this->diffusion_map[$dest_row][$dest_col]['food'] > $boost){
-//                        continue;
-//                    }
-//
-//                    $this->diffusion_map[$dest_row][$dest_col]['food'] = $boost;
-//                }
-//            }
+            $scentable = $this->getScentableTiles($food_row, $food_col, 10);
+            foreach($scentable as $scent){
+                $row_mod = $scent[0] - $food_row;
+                $col_mod = $scent[1] - $food_col;
+                $boost = $food_boost / ($this->ants->distance($food_row, $food_col, $scent[0], $scent[1]));
+
+                if($this->diffusion_map[$scent[0]][$scent[1]]['food'] > $boost){
+                        continue;
+                }
+
+                $this->diffusion_map[$scent[0]][$scent[1]]['food'] = $boost;
+            }
+        }
+        
+        foreach($this->enemy_hills as $hill){
+            $hill_boost = 10000 + rand(0, 2500);
+            list($hill_row, $hill_col) = $hill;
+            // Diffuse Food Scent in a radius of 10 units
+            $scentable = $this->getScentableTiles($hill_row, $hill_col, 20);
+            foreach($scentable as $scent){
+                $row_mod = $scent[0] - $hill_row;
+                $col_mod = $scent[1] - $hill_col;
+                $boost = $food_boost / ($this->ants->distance($hill_row, $hill_col, $scent[0], $scent[1]));
+
+                if($this->diffusion_map[$scent[0]][$scent[1]]['hill'] > $boost){
+                        continue;
+                }
+
+                $this->diffusion_map[$scent[0]][$scent[1]]['hill'] = $boost;
+            }
         }
 		$end = microtime(true);
-		$this->debug("Diffusion Time: ".($end-$start)." ($ittrs)\n");
+		$this->debug("Diffusion Time: ".($end-$start)."\n");
     }
 }
 

@@ -186,31 +186,42 @@ class Ants
 
     public function direction($row1, $col1, $row2, $col2) {
         $d = null;
-//        $row1 = $row1 % $this->rows;
-//        $row2 = $row2 % $this->rows;
-//        $col1 = $col1 % $this->cols;
-//        $col2 = $col2 % $this->cols;
-        if ($row1 < $row2) {
-			$d = 's';
-        }elseif ($row1 > $row2) {
-			$d = 'n';
-        }elseif ($col1 < $col2) {
-			$d = 'e';
-        }elseif ($col1 > $col2) {
-			$d = 'w';
+        $inverse = false;
+        $max_row = $this->rows;
+        $max_col = $this->cols;
+
+        if(abs($row1-$row2) > 1){
+            $inverse = true;
         }
-		$this->debug("Direction($d): $row1, $col1 | $row2, $col2\n");
+        if(abs($col1-$col2) > 1){
+            $inverse = true;
+        }
+
+        $row1 = $row1 % $this->rows;
+        $row2 = $row2 % $this->rows;
+        $col1 = $col1 % $this->cols;
+        $col2 = $col2 % $this->cols;
+        if ($row1 < $row2) {
+            $d = $inverse ? 'n' : 's';
+        }elseif ($row1 > $row2) {
+            $d = $inverse ? 's' : 'n';
+        }elseif ($col1 < $col2) {
+            $d = $inverse ? 'w' : 'e';
+        }elseif ($col1 > $col2) {
+            $d = $inverse ? 'e' : 'w';
+        }
+        $this->debug("Direction($d): $row1, $col1 | $row2, $col2\n");
         return $d;
 
     }
 
     public function debug($output){
-        file_put_contents($_SERVER['PWD']."/debug_ants.log", $output, LOCK_EX|FILE_APPEND);
+//        file_put_contents($_SERVER['PWD']."/debug_ants.log", $output, LOCK_EX|FILE_APPEND);
     }
 
     public static function run($bot)
     {
-		unlink($_SERVER['PWD']."/debug_ants.log");
+//        unlink($_SERVER['PWD']."/debug_ants.log");
         $ants = new Ants();
         $map_data = array();
 		$round = 0;
