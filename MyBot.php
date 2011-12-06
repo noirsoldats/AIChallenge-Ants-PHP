@@ -38,7 +38,11 @@ class MyBot
             foreach($map as $ri => $row){
                 $display .= str_pad($ri, 4, " ", STR_PAD_BOTH);
                 foreach($row as $ci => $col){
-                    $display .= "|".$this->type_short[$this->ants->map[$ri][$ci]]."".str_pad(round($col['food'], 0), 6, " ", STR_PAD_BOTH)."|";
+                    $display .= "|".$this->type_short[$this->ants->map[$ri][$ci]]."".str_pad(round($col['hill'], 0), 6, " ", STR_PAD_BOTH)."|";
+                    if($this->ants->visTool && $col['hill'] > 1){
+                        printf("v sfc 0 0 255 %s", ($col['hill']/100.0));
+                        printf("v t %s %s", $ri, $ci);
+                    }
     //                $display .= "|".$this->type_short[$this->ants->map[$ri][$ci]]."".str_pad($this->explorer_map[$ri][$ci], 6, " ", STR_PAD_BOTH)."|";
                 }
                 $display .= "\n";
@@ -401,9 +405,12 @@ class MyBot
             // Diffuse Food Scent in a radius of 10 units
             $scentable = $this->getScentableTiles($food_row, $food_col, 10);
             foreach($scentable as $scent){
-                $row_mod = $scent[0] - $food_row;
-                $col_mod = $scent[1] - $food_col;
-                $boost = $food_boost / ($this->ants->distance($food_row, $food_col, $scent[0], $scent[1]));
+                $distance = ($this->ants->distance($food_row, $food_col, $scent[0], $scent[1]));
+                if($distance == 0){
+                    $boost = $food_boost;
+                }else{
+                    $boost = $food_boost / $distance;
+                }
 
                 if($this->diffusion_map[$scent[0]][$scent[1]]['food'] > $boost){
                         continue;
@@ -419,9 +426,12 @@ class MyBot
             // Diffuse Food Scent in a radius of 10 units
             $scentable = $this->getScentableTiles($hill_row, $hill_col, 20);
             foreach($scentable as $scent){
-                $row_mod = $scent[0] - $hill_row;
-                $col_mod = $scent[1] - $hill_col;
-                $boost = $food_boost / ($this->ants->distance($hill_row, $hill_col, $scent[0], $scent[1]));
+                $distance = ($this->ants->distance($hill_row, $hill_col, $scent[0], $scent[1]));
+                if($distance == 0){
+                    $boost = $hill_boost;
+                }else{
+                    $boost = $hill_boost / $distance;
+                }
 
                 if($this->diffusion_map[$scent[0]][$scent[1]]['hill'] > $boost){
                         continue;

@@ -226,18 +226,18 @@ class Ants
     public static function run($bot)
     {
         global $argv,$argc;
-        if(in_array("--debug", $argv)){
-            $this->debugFlag = true;
-        }
-        if(in_array("--visTool", $argv)){
-            $this->visTool = true;
-        }
-        if($this->debugFlag){
-            unlink($_SERVER['PWD']."/debug_ants.log");
-        }
         $ants = new Ants();
         $map_data = array();
 	$round = 0;
+        if(in_array("--debug", $argv)){
+            $ants->debugFlag = true;
+        }
+        if(in_array("--visTool", $argv)){
+            $ants->visTool = true;
+        }
+        if($ants->debugFlag){
+            unlink($_SERVER['PWD']."/debug_ants.log");
+        }
         while(true) {
             $current_line = fgets(STDIN,1024);
             $current_line = trim($current_line);
