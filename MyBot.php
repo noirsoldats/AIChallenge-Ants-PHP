@@ -82,7 +82,7 @@ class MyBot
         $this->ants = $ants;
         $this->orders = array();
         $this->build_diffusion();
-        $this->outputMap($this->diffusion_map);
+        //$this->outputMap($this->diffusion_map);
         //$this->debug(var_export($this->diffusion_map, true));
         //$this->debug(var_export($ants, true));
         // Prevent Stepping on own hills
@@ -201,16 +201,18 @@ class MyBot
             }
 
             // Choose a random destination from possible destinations
-            $this->debug("DestinationsB: \n".var_export($destinations, true)."\n");
-            $start_shuffle = microtime(true);
-            shuffle($destinations);
-            $end_shuffle = microtime(true);
-            $this->debug("Shuffle Weight: ".($end_shuffle-$start_shuffle)."\n");
-            $this->debug("DestinationsA: \n".var_export($destinations, true)."\n");
-            list($dRow, $dCol) = $destinations[0];
-            if($this->do_move_location($aRow, $aCol, $dRow, $dCol)){
-                $this->debug("Dest: $dRow, $dCol\n");
-                $this->explorer_map[$dRow][$dCol] += 1;
+            if(count($destinations) > 0){
+                $this->debug("DestinationsB: \n".var_export($destinations, true)."\n");
+                $start_shuffle = microtime(true);
+                shuffle($destinations);
+                $end_shuffle = microtime(true);
+                $this->debug("Shuffle Weight: ".($end_shuffle-$start_shuffle)."\n");
+                $this->debug("DestinationsA: \n".var_export($destinations, true)."\n");
+                list($dRow, $dCol) = $destinations[0];
+                if($this->do_move_location($aRow, $aCol, $dRow, $dCol)){
+                    $this->debug("Dest: $dRow, $dCol\n");
+                    $this->explorer_map[$dRow][$dCol] += 1;
+                }
             }
             /*foreach ($this->directions as $direction) {
                 list($dRow, $dCol) = $ants->destination($aRow, $aCol, $direction);

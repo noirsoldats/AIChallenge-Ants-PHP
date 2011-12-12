@@ -10,6 +10,7 @@ define('UNSEEN', -5);
 
 class Ants
 {
+    public $roundStart = 0;
     public $debugFlag = false;
     public $visTool = false;
     public $turns = 0;
@@ -62,8 +63,14 @@ class Ants
     public function finishTurn()
     {
         echo("go\n");
+        $this->debug("Remaining Time: ".($this->timeRemaining())."\n");
         $this->debug("-------TURN-------\n");
         flush();
+    }
+    
+    public function timeRemaining(){
+        $endTime = microtime(true);
+        return (1.0 - ($endTime - $this->roundStart));
     }
     
     public function setup($data)
@@ -248,6 +255,7 @@ class Ants
             } elseif ($current_line === 'go') {
                 $round++;
                 $ants->currentTurn = $round;
+                $ants->roundStart = microtime(true);
                 if($round == 1){
                         $bot->doSetup($ants);
                 }
